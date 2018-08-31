@@ -1,4 +1,5 @@
 FROM mhart/alpine-node:10 as base
+RUN apk add --no-cache curl
 WORKDIR /usr/src
 COPY package.json yarn.lock /usr/src/
 RUN yarn install
