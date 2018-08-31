@@ -20,7 +20,8 @@ async function main() {
       await Promise.all(
         filenames.map(async filename => {
           const file = resolve(dir, filename)
-          data[example][filename] = await fs.readFile(file, 'utf8')
+          const contents = await fs.readFile(file, 'utf8')
+          data[example][filename] = contents.trim()
         })
       )
     })
