@@ -10,6 +10,7 @@ import CodeMirror from '@skidding/react-codemirror'
 import Section, { components } from '../../section'
 import { Code, InlineCode } from '../../../text/code'
 import Button from '../../../button'
+import { ExternalLink } from '../../../text/link'
 import Now from '../../../now/now'
 
 const CodeMirrorInstance =
@@ -212,7 +213,18 @@ class Editor extends React.PureComponent {
                   </div>
                 </div>,
                 <p className="note" key="1">
-                  Edit the code however you like! Press esc to enter vim mode.
+                  This is the{' '}
+                  <ExternalLink
+                    href={`https://github.com/zeit/now-examples/tree/master/${this
+                      .props.name}`}
+                  >
+                    {this.props.name}
+                  </ExternalLink>{' '}
+                  example.
+                </p>,
+                <p className="note bottom" key="2">
+                  Edit the code however you like! Press <kb>esc</kb> to enter
+                  vim mode.
                 </p>
               ]
             })()
@@ -841,8 +853,11 @@ class Editor extends React.PureComponent {
             text-align: center;
             font-size: 12px;
             color: #9b9b9b;
-            margin-top: 9.5em;
-            margin-bottom: 20px;
+            margin-top: 6.5em;
+            margin-bottom: 10px;
+          }
+          .note.bottom {
+            margin-top: 0;
           }
           @media screen and (max-width: 700px) {
             .demo {
@@ -949,7 +964,7 @@ to [our official clients](/download), exposed as simple HTTP endpoints.
 `
   ],
   [
-    <Editor files={this.state.files} onChange={this.onChange} key="1" />,
+    <Editor name={this.state.name} files={this.state.files} onChange={this.onChange} key="1" />,
     <Preview
       content={this.state.content}
       deploy={this.deploy}
