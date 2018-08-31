@@ -332,7 +332,6 @@ class Editor extends React.PureComponent {
           }
 
           .cm-tab {
-            display: inline-block;
             text-decoration: inherit;
           }
 
