@@ -15,36 +15,7 @@ import Now from '../../../now/now'
 const CodeMirrorInstance =
   typeof window !== 'undefined' ? require('codemirror') : null
 
-const FILES = {
-  Dockerfile: `FROM mhart/alpine-node:10 as base
-WORKDIR /usr/src
-COPY package.json /usr/src/
-RUN yarn --production
-COPY . .
-
-FROM mhart/alpine-node:base-10
-WORKDIR /usr/src
-COPY --from=base /usr/src .
-CMD ["node", "server.js"]`,
-  'server.js': `const { Server } = require('http')
-const bunny = require('sign-bunny')
-
-const server = Server((req, res) => {
-  res.setHeader(
-    'Content-Type',
-    'text/plain; charset=utf-8'
-  )
-  res.end(bunny('Hi there!'))
-})
-
-server.listen()`,
-  'package.json': `{
-  "name": "my-serverless-deployment",
-  "dependencies": {
-    "sign-bunny": "1.0.0"
-  }
-}`
-}
+import EXAMPLES from '../../../../lib/data/now-examples'
 
 function Preview(props) {
   return (
@@ -116,7 +87,7 @@ function Preview(props) {
 }
 
 Preview.defaultProps = {
-  files: FILES,
+  files: null,
   errorMessage: null,
   deploying: false
 }
@@ -126,7 +97,7 @@ class Editor extends React.PureComponent {
     super(props)
     this.state = {
       deploying: false,
-      selectedFilename: 'server.js',
+      selectedFilename: 'Dockerfile',
       vimMode: false
     }
     this.codeMirror = null
@@ -212,7 +183,7 @@ class Editor extends React.PureComponent {
                   </div>
                   <div className="main">
                     <ul className="file-tree">
-                      {Object.keys(FILES).map(filename => {
+                      {Object.keys(this.props.files).map(filename => {
                         return (
                           <li
                             key={filename}
@@ -898,9 +869,17 @@ class Editor extends React.PureComponent {
 class Introduction extends React.PureComponent {
   constructor(props) {
     super(props)
+
+    // Randomly select one of the examples
+    const exampleNames = Object.keys(EXAMPLES)
+    const name = exampleNames[Math.floor(exampleNames.length * Math.random())]
+
+    const files = EXAMPLES[name]
+
     this.state = {
-      files: FILES,
-      content: filesToAPIBody(FILES),
+      files,
+      name,
+      content: filesToAPIBody(name, files),
       deploying: false,
       errorMessage: null
     }
@@ -917,7 +896,9 @@ class Introduction extends React.PureComponent {
         }
       }
 
-      const content = errorMessage ? prevState.content : filesToAPIBody(files)
+      const content = errorMessage
+        ? prevState.content
+        : filesToAPIBody(prevState.name, files)
       return { files, content, errorMessage }
     })
   }
@@ -986,19 +967,32 @@ to [our official clients](/download), exposed as simple HTTP endpoints.
 
 export default Introduction
 
-function filesToAPIBody(files) {
-  const pkg = JSON.parse(files['package.json'])
+function filesToAPIBody(name, files) {
+  let config = {}
+
+  try {
+    // Parse the `now.json` file to place it into the `config` of
+    // the deployment, similar to what `now-cli` does
+    config = JSON.parse(files['now.json'])
+  } catch (err) {
+    // Ignore…
+  }
+
+  try {
+    // If there is a package.json file then attempt to use
+    // the `name` from there for the deployment name
+    const pkg = JSON.parse(files['package.json'])
+    name = pkg.name
+  } catch (err) {
+    // Ignore…
+  }
 
   return JSON.stringify(
     {
-      name: pkg.name,
+      name,
       deploymentType: 'DOCKER',
       public: true,
-      config: {
-        features: {
-          cloud: 'v2'
-        }
-      },
+      config,
       files: Object.entries(files).map(([file, data]) => ({
         file,
         data: data.replace(/'/g, '"')
