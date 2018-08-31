@@ -16,22 +16,32 @@ const CodeMirrorInstance =
   typeof window !== 'undefined' ? require('codemirror') : null
 
 const FILES = {
-  'index.js': `const { Server } = require('http')
+  Dockerfile: `FROM mhart/alpine-node:10 as base
+WORKDIR /usr/src
+COPY package.json /usr/src/
+RUN yarn --production
+COPY . .
+
+FROM mhart/alpine-node:base-10
+WORKDIR /usr/src
+COPY --from=base /usr/src .
+CMD ["node", "server.js"]`,
+  'server.js': `const { Server } = require('http')
 const bunny = require('sign-bunny')
 
 const server = Server((req, res) => {
-  res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+  res.setHeader(
+    'Content-Type',
+    'text/plain; charset=utf-8'
+  )
   res.end(bunny('Hi there!'))
 })
 
 server.listen()`,
   'package.json': `{
-  "name": "my-instant-deployment",
+  "name": "my-serverless-deployment",
   "dependencies": {
     "sign-bunny": "1.0.0"
-  },
-  "scripts": {
-    "start": "node index"
   }
 }`
 }
@@ -40,7 +50,7 @@ function Preview(props) {
   return (
     <div className="preview">
       <Code syntax="shell">{`curl -X POST https://api.zeit.co/v3/now/deployments \\
--H 'Authorization: Bearer $TOKEN' \\
+-H "Authorization: Bearer $TOKEN" \\
 -d '${(props.content || '').replace(/'/g, "\\'")}'`}</Code>
       {props.errorMessage ? (
         <div className="error-message" key="2">
@@ -116,7 +126,7 @@ class Editor extends React.PureComponent {
     super(props)
     this.state = {
       deploying: false,
-      selectedFilename: 'index.js',
+      selectedFilename: 'server.js',
       vimMode: false
     }
     this.codeMirror = null
@@ -982,8 +992,13 @@ function filesToAPIBody(files) {
   return JSON.stringify(
     {
       name: pkg.name,
-      deploymentType: 'NPM',
+      deploymentType: 'DOCKER',
       public: true,
+      config: {
+        features: {
+          cloud: 'v2'
+        }
+      },
       files: Object.entries(files).map(([file, data]) => ({
         file,
         data: data.replace(/'/g, '"')
